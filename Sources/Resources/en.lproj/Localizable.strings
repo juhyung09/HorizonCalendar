@@ -1,0 +1,20 @@
+"calendar.month.january" = "January";
+"calendar.month.february" = "February";
+"calendar.month.march" = "March";
+"calendar.month.april" = "April";
+"calendar.month.may" = "May";
+"calendar.month.june" = "June";
+"calendar.month.july" = "July";
+"calendar.month.august" = "August";
+"calendar.month.september" = "September";
+"calendar.month.october" = "October";
+"calendar.month.november" = "November";
+"calendar.month.december" = "December";
+
+"calendar.weekday.sunday" = "S";
+"calendar.weekday.monday" = "M";
+"calendar.weekday.tuesday" = "T";
+"calendar.weekday.wednesday" = "W";
+"calendar.weekday.thursday" = "T";
+"calendar.weekday.friday" = "F";
+"calendar.weekday.saturday" = "S";

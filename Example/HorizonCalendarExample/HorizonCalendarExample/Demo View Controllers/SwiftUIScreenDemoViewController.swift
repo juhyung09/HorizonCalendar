@@ -24,6 +24,11 @@ final class SwiftUIScreenDemoViewController: UIViewController, DemoViewControlle
 
   init(monthsLayout: MonthsLayout) {
     self.monthsLayout = monthsLayout
+    calendar = Calendar.current
+    selectedLanguage = CalendarLanguage.preferredLanguage(
+      for: calendar.locale ?? Locale.current
+    )
+    calendar.locale = Locale(identifier: selectedLanguage.localeIdentifier)
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -33,7 +38,7 @@ final class SwiftUIScreenDemoViewController: UIViewController, DemoViewControlle
 
   // MARK: Internal
 
-  let calendar = Calendar.current
+  var calendar: Calendar
   let monthsLayout: MonthsLayout
 
   override func viewDidLoad() {
@@ -41,21 +46,73 @@ final class SwiftUIScreenDemoViewController: UIViewController, DemoViewControlle
 
     title = "SwiftUI Screen"
 
+    languageControl.selectedSegmentIndex = selectedLanguage.rawValue
+
+    let stackView = UIStackView()
+    stackView.axis = .vertical
+    stackView.spacing = 12
+    stackView.alignment = .center
+    stackView.translatesAutoresizingMaskIntoConstraints = false
+
+    stackView.addArrangedSubview(languageControl)
+
+    view.addSubview(stackView)
+    NSLayoutConstraint.activate([
+      stackView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+      stackView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
+      stackView.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
+      stackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
+
+    addHostingController(to: stackView)
+  }
+
+  // MARK: Private
+
+  private var selectedLanguage: CalendarLanguage
+  private var hostingController: UIHostingController<SwiftUIScreenDemo>?
+
+  private lazy var languageControl: UISegmentedControl = {
+    let control = UISegmentedControl(items: CalendarLanguage.allCases.map(\.title))
+    control.addTarget(self, action: #selector(languageDidChange), for: .valueChanged)
+    control.translatesAutoresizingMaskIntoConstraints = false
+    return control
+  }()
+
+  private func addHostingController(to stackView: UIStackView) {
     let hostingController = UIHostingController(
       rootView: SwiftUIScreenDemo(calendar: calendar, monthsLayout: monthsLayout)
     )
     addChild(hostingController)
-
-    view.addSubview(hostingController.view)
     hostingController.view.translatesAutoresizingMaskIntoConstraints = false
-    NSLayoutConstraint.activate([
-      hostingController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      hostingController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      hostingController.view.topAnchor.constraint(equalTo: view.topAnchor),
-      hostingController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-    ])
-
+    stackView.addArrangedSubview(hostingController.view)
+    hostingController.view.widthAnchor.constraint(lessThanOrEqualToConstant: 375).isActive = true
+    let lowPriorityWidth = hostingController.view.widthAnchor.constraint(equalToConstant: 375)
+    lowPriorityWidth.priority = .defaultLow
+    lowPriorityWidth.isActive = true
     hostingController.didMove(toParent: self)
+    self.hostingController = hostingController
+  }
+
+  @objc private func languageDidChange() {
+    guard let language = CalendarLanguage(rawValue: languageControl.selectedSegmentIndex) else {
+      return
+    }
+
+    selectedLanguage = language
+    calendar.locale = Locale(identifier: language.localeIdentifier)
+
+    guard let stackView = view.subviews.compactMap({ $0 as? UIStackView }).first else {
+      return
+    }
+
+    if let hostingController {
+      hostingController.willMove(toParent: nil)
+      hostingController.view.removeFromSuperview()
+      hostingController.removeFromParent()
+    }
+
+    addHostingController(to: stackView)
   }
 
 }
