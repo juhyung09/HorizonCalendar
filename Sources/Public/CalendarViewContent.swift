@@ -408,10 +408,12 @@ public final class CalendarViewContent {
   /// or if the existing provider returns nil.
   private lazy var defaultMonthHeaderItemProvider: (Month) -> AnyCalendarItemModel = { [
     calendar,
-    monthHeaderDateFormatter
+    monthHeaderYearDateFormatter
   ] month in
     let firstDateInMonth = calendar.firstDate(of: month)
-    let monthText = monthHeaderDateFormatter.string(from: firstDateInMonth)
+    let monthName = CalendarLocalization.monthName(for: month.month, calendar: calendar)
+    let yearText = monthHeaderYearDateFormatter.string(from: firstDateInMonth)
+    let monthText = "\(monthName) \(yearText)"
     return MonthHeaderView.calendarItemModel(
       invariantViewProperties: .base,
       content: .init(monthText: monthText, accessibilityLabel: monthText)
@@ -421,8 +423,11 @@ public final class CalendarViewContent {
   /// The default `dayHeaderItemProvider` if no provider has been configured,
   /// or if the existing provider returns nil.
   private lazy var defaultDayOfWeekItemProvider: (Month?, Int)
-    -> AnyCalendarItemModel = { [monthHeaderDateFormatter] _, weekdayIndex in
-      let dayOfWeekText = monthHeaderDateFormatter.veryShortStandaloneWeekdaySymbols[weekdayIndex]
+    -> AnyCalendarItemModel = { [calendar, fallbackWeekdayDateFormatter] _, weekdayIndex in
+      let localizedSymbol = CalendarLocalization.weekdaySymbol(for: weekdayIndex, calendar: calendar)
+      let dayOfWeekText = localizedSymbol.isEmpty
+        ? fallbackWeekdayDateFormatter.veryShortStandaloneWeekdaySymbols[weekdayIndex]
+        : localizedSymbol
       return DayOfWeekView.calendarItemModel(
         invariantViewProperties: .base,
         content: .init(dayOfWeekText: dayOfWeekText, accessibilityLabel: dayOfWeekText)
@@ -443,16 +448,23 @@ public final class CalendarViewContent {
     )
   }
 
-  private lazy var monthHeaderDateFormatter: DateFormatter = {
-    let monthHeaderDateFormatter = DateFormatter()
-    monthHeaderDateFormatter.calendar = calendar
-    monthHeaderDateFormatter.locale = calendar.locale
-    monthHeaderDateFormatter.dateFormat = DateFormatter.dateFormat(
-      fromTemplate: "MMMM yyyy",
+  private lazy var monthHeaderYearDateFormatter: DateFormatter = {
+    let monthHeaderYearDateFormatter = DateFormatter()
+    monthHeaderYearDateFormatter.calendar = calendar
+    monthHeaderYearDateFormatter.locale = calendar.locale
+    monthHeaderYearDateFormatter.dateFormat = DateFormatter.dateFormat(
+      fromTemplate: "yyyy",
       options: 0,
       locale: calendar.locale ?? Locale.current
     )
-    return monthHeaderDateFormatter
+    return monthHeaderYearDateFormatter
+  }()
+
+  private lazy var fallbackWeekdayDateFormatter: DateFormatter = {
+    let fallbackWeekdayDateFormatter = DateFormatter()
+    fallbackWeekdayDateFormatter.calendar = calendar
+    fallbackWeekdayDateFormatter.locale = calendar.locale
+    return fallbackWeekdayDateFormatter
   }()
 
   private lazy var dayDateFormatter: DateFormatter = {
