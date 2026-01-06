@@ -15,6 +15,53 @@ protocol DemoViewController: UIViewController {
 
 }
 
+// MARK: - CalendarLanguage
+
+enum CalendarLanguage: Int, CaseIterable {
+
+  case korean
+  case english
+  case vietnamese
+
+  var title: String {
+    switch self {
+    case .korean:
+      return "한국어"
+    case .english:
+      return "English"
+    case .vietnamese:
+      return "Tiếng Việt"
+    }
+  }
+
+  var localeIdentifier: String {
+    switch self {
+    case .korean:
+      return "ko"
+    case .english:
+      return "en"
+    case .vietnamese:
+      return "vi"
+    }
+  }
+
+  static func preferredLanguage(for locale: Locale) -> CalendarLanguage {
+    guard let languageCode = locale.languageCode else {
+      return .english
+    }
+
+    switch languageCode {
+    case "ko":
+      return .korean
+    case "vi":
+      return .vietnamese
+    default:
+      return .english
+    }
+  }
+
+}
+
 // MARK: - BaseDemoViewController
 
 class BaseDemoViewController: UIViewController, DemoViewController {
@@ -23,6 +70,11 @@ class BaseDemoViewController: UIViewController, DemoViewController {
 
   required init(monthsLayout: MonthsLayout) {
     self.monthsLayout = monthsLayout
+    calendar = Calendar.current
+    selectedLanguage = CalendarLanguage.preferredLanguage(
+      for: calendar.locale ?? Locale.current
+    )
+    calendar.locale = Locale(identifier: selectedLanguage.localeIdentifier)
 
     super.init(nibName: nil, bundle: nil)
   }
@@ -36,38 +88,34 @@ class BaseDemoViewController: UIViewController, DemoViewController {
   let monthsLayout: MonthsLayout
 
   lazy var calendarView = CalendarView(initialContent: makeContent())
-  lazy var calendar = Calendar.current
-  lazy var dayDateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.calendar = calendar
-    dateFormatter.locale = calendar.locale
-    dateFormatter.dateFormat = DateFormatter.dateFormat(
-      fromTemplate: "EEEE, MMM d, yyyy",
-      options: 0,
-      locale: calendar.locale ?? Locale.current
-    )
-    return dateFormatter
-  }()
+  var calendar: Calendar
+  var dayDateFormatter = DateFormatter()
 
   override func viewDidLoad() {
     super.viewDidLoad()
 
     view.backgroundColor = .systemBackground
 
-    view.addSubview(calendarView)
+    configureDayDateFormatter()
+
+    languageControl.selectedSegmentIndex = selectedLanguage.rawValue
+
+    let stackView = UIStackView(arrangedSubviews: [languageControl, calendarView])
+    stackView.axis = .vertical
+    stackView.spacing = 12
+    stackView.alignment = .center
+    stackView.translatesAutoresizingMaskIntoConstraints = false
+
+    view.addSubview(stackView)
 
     calendarView.translatesAutoresizingMaskIntoConstraints = false
     switch monthsLayout {
     case .vertical:
       NSLayoutConstraint.activate([
-        calendarView.topAnchor.constraint(equalTo: view.topAnchor),
-        calendarView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        calendarView.leadingAnchor.constraint(
-          greaterThanOrEqualTo: view.layoutMarginsGuide.leadingAnchor
-        ),
-        calendarView.trailingAnchor.constraint(
-          lessThanOrEqualTo: view.layoutMarginsGuide.trailingAnchor
-        ),
+        stackView.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
+        stackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        stackView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+        stackView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
         calendarView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         calendarView.widthAnchor.constraint(lessThanOrEqualToConstant: 375),
         calendarView.widthAnchor.constraint(equalToConstant: 375).prioritize(at: .defaultLow),
@@ -75,9 +123,10 @@ class BaseDemoViewController: UIViewController, DemoViewController {
 
     case .horizontal:
       NSLayoutConstraint.activate([
-        calendarView.centerYAnchor.constraint(equalTo: view.layoutMarginsGuide.centerYAnchor),
-        calendarView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor),
-        calendarView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor),
+        stackView.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
+        stackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        stackView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+        stackView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
         calendarView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         calendarView.widthAnchor.constraint(lessThanOrEqualToConstant: 375),
         calendarView.widthAnchor.constraint(equalToConstant: 375).prioritize(at: .defaultLow),
@@ -87,6 +136,41 @@ class BaseDemoViewController: UIViewController, DemoViewController {
 
   func makeContent() -> CalendarViewContent {
     fatalError("Must be implemented by a subclass.")
+  }
+
+  func updateAdditionalFormatters() {}
+
+  // MARK: Private
+
+  private lazy var languageControl: UISegmentedControl = {
+    let control = UISegmentedControl(items: CalendarLanguage.allCases.map(\.title))
+    control.addTarget(self, action: #selector(languageDidChange), for: .valueChanged)
+    control.translatesAutoresizingMaskIntoConstraints = false
+    return control
+  }()
+
+  private var selectedLanguage: CalendarLanguage
+
+  private func configureDayDateFormatter() {
+    dayDateFormatter.calendar = calendar
+    dayDateFormatter.locale = calendar.locale
+    dayDateFormatter.dateFormat = DateFormatter.dateFormat(
+      fromTemplate: "EEEE, MMM d, yyyy",
+      options: 0,
+      locale: calendar.locale ?? Locale.current
+    )
+  }
+
+  @objc private func languageDidChange() {
+    guard let language = CalendarLanguage(rawValue: languageControl.selectedSegmentIndex) else {
+      return
+    }
+
+    selectedLanguage = language
+    calendar.locale = Locale(identifier: language.localeIdentifier)
+    configureDayDateFormatter()
+    updateAdditionalFormatters()
+    calendarView.setContent(makeContent())
   }
 
 }

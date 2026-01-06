@@ -25,6 +25,7 @@ final class SwiftUIItemModelsDemoViewController: BaseDemoViewController {
     super.viewDidLoad()
 
     title = "SwiftUI Day and Month Views"
+    configureMonthDateFormatter()
 
     calendarView.daySelectionHandler = { [weak self] day in
       guard let self else { return }
@@ -72,18 +73,22 @@ final class SwiftUIItemModelsDemoViewController: BaseDemoViewController {
 
   // MARK: Private
 
-  private lazy var monthDateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.calendar = calendar
-    dateFormatter.locale = calendar.locale
-    dateFormatter.dateFormat = DateFormatter.dateFormat(
+  private var monthDateFormatter = DateFormatter()
+
+  private var selectedDate: Date?
+
+  private func configureMonthDateFormatter() {
+    monthDateFormatter.calendar = calendar
+    monthDateFormatter.locale = calendar.locale
+    monthDateFormatter.dateFormat = DateFormatter.dateFormat(
       fromTemplate: "MMMM yyyy",
       options: 0,
       locale: calendar.locale ?? Locale.current
     )
-    return dateFormatter
-  }()
+  }
 
-  private var selectedDate: Date?
+  override func updateAdditionalFormatters() {
+    configureMonthDateFormatter()
+  }
 
 }
